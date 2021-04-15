@@ -1,7 +1,6 @@
 #include "MainWindow.h"
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     networkConnectFlag = false;
     m_hasReceiveData = false;
@@ -51,8 +50,7 @@ bool MainWindow::initMenuFile(QMenu *menu)
     m_receiveToFile->setEnabled(false);
 
     connect(sendFile, SIGNAL(triggered()), this, SLOT(onTriggeredSendFile()));
-    connect(m_receiveToFile, SIGNAL(triggered()), this,
-            SLOT(onTriggeredReceiveFile()));
+    connect(m_receiveToFile, SIGNAL(triggered()), this, SLOT(onTriggeredReceiveFile()));
     connect(exit, SIGNAL(triggered()), this, SLOT(close()));
 
     menu->addAction(sendFile);
@@ -74,8 +72,8 @@ bool MainWindow::initMenuCode(QMenu *menu)
     ascii->setCheckable(true);
     utf_8->setCheckable(true);
 
-    ascii->setChecked(true);
-    utf_8->setChecked(false);
+    ascii->setChecked(false);
+    utf_8->setChecked(true);
 
     connect(ascii, SIGNAL(toggled(bool)), this, SLOT(onToggledAscii(bool)));
     connect(utf_8, SIGNAL(toggled(bool)), this, SLOT(onToggledUtf_8(bool)));
@@ -153,8 +151,7 @@ bool MainWindow::initLeftWidget(QHBoxLayout *layout)
     QPushButton *clearm_receiveBuffer = new QPushButton(this);
     QPushButton *send = new QPushButton(this);
     QPushButton *exit = new QPushButton(this);
-    assert(connectButton && clearSendBuffer && clearm_receiveBuffer && send
-           && exit);
+    assert(connectButton && clearSendBuffer && clearm_receiveBuffer && send && exit);
 
     m_light->setState(QLightLabel::Normal);
     m_light->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -179,11 +176,9 @@ bool MainWindow::initLeftWidget(QHBoxLayout *layout)
     connect(clearSendBuffer, SIGNAL(clicked()), this, SLOT(clearSendBuffer()));
 
     clearm_receiveBuffer->setText("清空接收区");
-    clearm_receiveBuffer->setSizePolicy(QSizePolicy::Expanding,
-                                        QSizePolicy::Expanding);
+    clearm_receiveBuffer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     clearm_receiveBuffer->setMinimumWidth(200);
-    connect(clearm_receiveBuffer, SIGNAL(clicked()), this,
-            SLOT(clearReceiveBuffer()));
+    connect(clearm_receiveBuffer, SIGNAL(clicked()), this, SLOT(clearReceiveBuffer()));
 
     send->setText("发送数据");
     send->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);

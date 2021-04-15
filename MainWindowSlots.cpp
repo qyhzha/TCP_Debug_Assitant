@@ -12,9 +12,7 @@ void MainWindow::onTriggeredSendFile()
 
         if (file.open(QIODevice::ReadOnly) == false)
         {
-            QMessageBox::critical(this, "出错了",
-                                  QString("不能打开该文件！\n请检查是否有权限读取该文件...\n文件名：")
-                                  + filename);
+            QMessageBox::critical(this, "出错了", QString("不能打开该文件！\n请检查是否有权限读取该文件...\n文件名：") + filename);
             return;
         }
 
@@ -40,16 +38,12 @@ void MainWindow::onTriggeredReceiveFile()
 
         if (file.open(QIODevice::WriteOnly) == false)
         {
-            QMessageBox::critical(this, "出错了",
-                                  QString("不能打开该文件！\n请检查是否有权限写入该文件...\n文件名：")
-                                  + filename);
+            QMessageBox::critical(this, "出错了", QString("不能打开该文件！\n请检查是否有权限写入该文件...\n文件名：") + filename);
             return;
         }
 
-        qDebug() << __FUNCTION__ << ": length = " <<
-                 m_receiveBuffer->toPlainText().toStdString().length();
-        qint64 bytes = file.write(m_receiveBuffer->toPlainText().toStdString().c_str(),
-                                  m_receiveBuffer->toPlainText().toStdString().length());
+        qDebug() << __FUNCTION__ << ": length = " << m_receiveBuffer->toPlainText().toStdString().length();
+        qint64 bytes = file.write(m_receiveBuffer->toPlainText().toStdString().c_str(), m_receiveBuffer->toPlainText().toStdString().length());
         qDebug() << __FUNCTION__ << ": bytes = " << bytes;
         file.close();
     }
@@ -81,8 +75,7 @@ void MainWindow::onConnectButton()
             m_socket = new QTcpSocket(this);
             if (m_socket == NULL)
             {
-                QMessageBox::critical(this, "出错了",
-                                      "创建TCP连接失败！\n请稍后再试...");
+                QMessageBox::critical(this, "出错了", "创建TCP连接失败！\n请稍后再试...");
                 qDebug() << "Create tcp socket error...";
                 return;
             }
@@ -90,8 +83,7 @@ void MainWindow::onConnectButton()
             m_socket->connectToHost(hostIp->text(), hostPort->value());
             if (m_socket->waitForConnected(3000) == false)
             {
-                QMessageBox::critical(this, "出错了",
-                                      "连接目标地址失败！\n请检查目标地址是否是合法的域名地址...");
+                QMessageBox::critical(this, "出错了", "连接目标地址失败！\n请检查目标地址是否是合法的域名地址...");
                 qDebug() << "Connect error...";
                 return;
             }
@@ -149,8 +141,7 @@ void MainWindow::onSendData()
 
     if (data.isEmpty())
     {
-        QMessageBox::critical(this, "出错了",
-                              "发送缓冲区没有数据...\n请在发送缓冲区写入待发送数据。\n");
+        QMessageBox::critical(this, "出错了", "发送缓冲区没有数据...\n请在发送缓冲区写入待发送数据。\n");
         return;
     }
     else
