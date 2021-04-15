@@ -3,5 +3,6 @@
         "qapplication": "cpp",
         "qtcpsocket": "c",
         "qtcpsocket.h": "c"
-    }
+    },
+    "restructuredtext.confPath": ""
 }

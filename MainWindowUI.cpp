@@ -40,20 +40,20 @@ bool MainWindow::initMenuFile(QMenu *menu)
 {
     assert(menu);
 
-    sendFile = new QAction("Send File...", this);
+    m_sendFileAction = new QAction("Send File...", this);
     m_receiveToFile = new QAction("Receive File...", this);
     QAction *exit = new QAction("Exit...", this);
 
-    assert(sendFile && m_receiveToFile && exit);
+    assert(m_sendFileAction && m_receiveToFile && exit);
 
-    sendFile->setEnabled(false);
+    m_sendFileAction->setEnabled(false);
     m_receiveToFile->setEnabled(false);
 
-    connect(sendFile, SIGNAL(triggered()), this, SLOT(onTriggeredSendFile()));
+    connect(m_sendFileAction, SIGNAL(triggered()), this, SLOT(onTriggeredSendFile()));
     connect(m_receiveToFile, SIGNAL(triggered()), this, SLOT(onTriggeredReceiveFile()));
     connect(exit, SIGNAL(triggered()), this, SLOT(close()));
 
-    menu->addAction(sendFile);
+    menu->addAction(m_sendFileAction);
     menu->addAction(m_receiveToFile);
     menu->addAction(exit);
 
@@ -146,21 +146,21 @@ bool MainWindow::initLeftWidget(QHBoxLayout *layout)
     assert(layout);
 
     m_light = new QLightLabel(this);
-    connectButton = new QPushButton(this);
+    m_button = new QPushButton(this);
     QPushButton *clearSendBuffer = new QPushButton(this);
     QPushButton *clearm_receiveBuffer = new QPushButton(this);
     QPushButton *send = new QPushButton(this);
     QPushButton *exit = new QPushButton(this);
-    assert(connectButton && clearSendBuffer && clearm_receiveBuffer && send && exit);
+    assert(m_button && clearSendBuffer && clearm_receiveBuffer && send && exit);
 
     m_light->setState(false);
     m_light->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     m_light->setMinimumSize(20, 20);
 
-    connectButton->setText("连接网络");
-    connectButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    connectButton->setMinimumWidth(140);
-    connect(connectButton, SIGNAL(clicked()), this, SLOT(onConnectButton()));
+    m_button->setText("连接网络");
+    m_button->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_button->setMinimumWidth(140);
+    connect(m_button, SIGNAL(clicked()), this, SLOT(onConnectButton()));
 
     QHBoxLayout *h = new QHBoxLayout();
 
@@ -168,7 +168,7 @@ bool MainWindow::initLeftWidget(QHBoxLayout *layout)
     h->setContentsMargins(4, 0, 4, 0);
 
     h->addWidget(m_light, 1, Qt::AlignCenter);
-    h->addWidget(connectButton, 5, Qt::AlignCenter);
+    h->addWidget(m_button, 5, Qt::AlignCenter);
 
     clearSendBuffer->setText("清空发送区");
     clearSendBuffer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -214,26 +214,37 @@ bool MainWindow::initConnectWidget(QVBoxLayout *layout)
     assert(layout);
 
     QGroupBox *connectBox = new QGroupBox(this);
-    m_tcpClient = new QRadioButton(connectBox);
-    m_tcpServer = new QRadioButton(connectBox);
+    m_tcpClientButton = new QRadioButton(connectBox);
+    m_tcpClient = new QTcpSocket(this);
+    m_tcpServerButton = new QRadioButton(connectBox);
+    m_tcpServer = new QTcpServer(this);
     m_udp = new QRadioButton(connectBox);
-    assert(connectBox && m_tcpClient && m_tcpServer && m_udp);
+    assert(connectBox && m_tcpClientButton && m_tcpClient && m_tcpServerButton && m_udp);
 
     connectBox->setTitle("连接方式:");
     connectBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     connectBox->setMinimumWidth(200);
 
-    m_tcpClient->setText("TCP 客户端");
-    m_tcpClient->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_tcpClient->setMinimumWidth(180);
-    m_tcpClient->setChecked(true);
-    connect(m_tcpClient, SIGNAL(toggled(bool)), this, SLOT(onToggledTcpClient(bool)));
+    m_tcpClientButton->setText("TCP 客户端");
+    m_tcpClientButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_tcpClientButton->setMinimumWidth(180);
+    m_tcpClientButton->setChecked(true);
+    connect(m_tcpClientButton, SIGNAL(toggled(bool)), this, SLOT(onToggledTcpClient(bool)));
 
-    m_tcpServer->setText("TCP 服务器");
-    m_tcpServer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    m_tcpServer->setMinimumWidth(180);
-    m_tcpServer->setChecked(false);
-    connect(m_tcpServer, SIGNAL(toggled(bool)), this, SLOT(onToggledTcpServer(bool)));
+    m_tcpClientRecord.hostIpStr = "";
+    m_tcpClientRecord.buttonStr = "连接网络";
+    m_tcpClientRecord.lightState = false;
+    m_tcpClientRecord.sendFileEnable = false;
+
+    m_tcpServerButton->setText("TCP 服务器");
+    m_tcpServerButton->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_tcpServerButton->setMinimumWidth(180);
+    m_tcpServerButton->setChecked(false);
+    connect(m_tcpServerButton, SIGNAL(toggled(bool)), this, SLOT(onToggledTcpServer(bool)));
+
+    m_tcpServerRecord.buttonStr = "开启监听";
+    m_tcpServerRecord.lightState = false;
+    m_tcpServerRecord.sendFileEnable = false;
 
     m_udp->setText("UDP");
     m_udp->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -246,8 +257,8 @@ bool MainWindow::initConnectWidget(QVBoxLayout *layout)
 
     vl->setSpacing(4);
     vl->setContentsMargins(10, 10, 10, 10);
-    vl->addWidget(m_tcpClient, 1, Qt::AlignLeft);
-    vl->addWidget(m_tcpServer, 1, Qt::AlignLeft);
+    vl->addWidget(m_tcpClientButton, 1, Qt::AlignLeft);
+    vl->addWidget(m_tcpServerButton, 1, Qt::AlignLeft);
     vl->addWidget(m_udp, 1, Qt::AlignLeft);
 
     connectBox->setLayout(vl);

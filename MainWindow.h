@@ -23,6 +23,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTcpSocket>
+#include <QTcpServer>
 #include <QDebug>
 
 #include "QLightLabel.h"
@@ -35,29 +36,39 @@ class MainWindow : public QMainWindow
         struct tcpClientRecord : public QObject
         {
             QString hostIpStr;
+            QString buttonStr;
             bool lightState;
+            bool sendFileEnable;
+        };
+
+        struct tcpServerRecord : public QObject
+        {
+            QString buttonStr;
+            bool lightState;
+            bool sendFileEnable;
         };
 
     protected:
-        QAction *sendFile;
+        QAction *m_sendFileAction;
         QAction *m_receiveToFile;
         QAction *ascii;
         QAction *utf_8;
-        QRadioButton *m_tcpClient;
+        QRadioButton *m_tcpClientButton;
         tcpClientRecord m_tcpClientRecord;
-        QRadioButton *m_tcpServer;
+        QTcpSocket *m_tcpClient;
+        QRadioButton *m_tcpServerButton;
+        tcpServerRecord m_tcpServerRecord;
+        QTcpServer *m_tcpServer;
         QRadioButton *m_udp;
         QLineEdit *m_hostIp;
         QSpinBox *hostPort;
         QLightLabel *m_light;
-        QPushButton *connectButton;
+        QPushButton *m_button;
         QPlainTextEdit *m_receiveBuffer;
         QPlainTextEdit *m_sendBuffer;
 
         bool networkConnectFlag;
         bool m_hasReceiveData;
-
-        QTcpSocket *m_socket;
 
     protected:
         MainWindow(QWidget *parent);
@@ -79,6 +90,8 @@ class MainWindow : public QMainWindow
         void handleListen();
         void handleUdp();
 
+        void onReadyRead(QTcpSocket *socket);
+
     protected slots:
         void onTriggeredSendFile();
         void onTriggeredReceiveFile();
@@ -87,9 +100,16 @@ class MainWindow : public QMainWindow
         void onToggledTcpClient(bool flag);
         void onToggledTcpServer(bool flag);
         void onToggledUdp(bool flag);
+
         void onConnectButton();
-        void onReadyRead();
         void onSendData();
+
+        void onClientReadyRead();
+
+        void onNewConnection();
+        void onServerDisconnected();
+        void onServerReadyRead();
+
         void clearSendBuffer();
         void clearReceiveBuffer();
 

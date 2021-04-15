@@ -12,16 +12,8 @@ void MainWindow::handleConnect()
             return;
         }
 
-        m_socket = new QTcpSocket(this);
-        if (m_socket == NULL)
-        {
-            QMessageBox::critical(this, "出错了", "创建TCP连接失败！\n请稍后再试...");
-            qDebug() << "Create tcp socket error...";
-            return;
-        }
-
-        m_socket->connectToHost(m_hostIp->text(), hostPort->value());
-        if (m_socket->waitForConnected(3000) == false)
+        m_tcpClient->connectToHost(m_hostIp->text(), hostPort->value());
+        if (m_tcpClient->waitForConnected(3000) == false)
         {
             QMessageBox::critical(this, "出错了", "连接目标地址失败！\n请检查目标地址是否是合法的域名地址...");
             qDebug() << "Connect error...";
@@ -30,21 +22,21 @@ void MainWindow::handleConnect()
 
         qDebug() << __FUNCTION__ << ": connect success!";
 
-        connect(m_socket, SIGNAL(readyRead()), this, SLOT(onReadyRead()));
+        connect(m_tcpClient, SIGNAL(readyRead()), this, SLOT(onClientReadyRead()));
 
-        sendFile->setEnabled(true);
-        connectButton->setText("断开连接");
+        m_sendFileAction->setEnabled(true);
+        m_button->setText("断开连接");
         m_light->setState(true);
         connectFlag = true;
     }
     else
     {
-        m_socket->close();
+        m_tcpClient->close();
 
         qDebug() << __FUNCTION__ << ": Close network connect success!";
 
-        sendFile->setEnabled(false);
-        connectButton->setText("连接网络");
+        m_sendFileAction->setEnabled(false);
+        m_button->setText("连接网络");
         m_light->setState(false);
         connectFlag = false;
     }
@@ -52,7 +44,34 @@ void MainWindow::handleConnect()
 
 void MainWindow::handleListen()
 {
+    static bool listenFlag = false;
+    if (!listenFlag)
+    {
+        if (m_tcpServer->listen(QHostAddress::Any, hostPort->value()) != true)
+        {
+            QMessageBox::critical(this, "出错了", "监听目标端口失败！\n请检查目标端口是否被占用...");
+            qDebug() << "Listen error...";
+            return;
+        }
 
+        connect(m_tcpServer, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
+
+        qDebug() << __FUNCTION__ << ": listern success!";
+
+        m_button->setText("结束监听");
+        listenFlag = true;
+    }
+    else
+    {
+        m_tcpServer->close();
+
+        qDebug() << __FUNCTION__ << ": Close listen success!";
+
+        m_sendFileAction->setEnabled(false);
+        m_button->setText("开启监听");
+        m_light->setState(false);
+        listenFlag = false;
+    }
 }
 
 void MainWindow::handleUdp()
@@ -72,16 +91,14 @@ void MainWindow::onTriggeredSendFile()
 
         if (file.open(QIODevice::ReadOnly) == false)
         {
-            QMessageBox::critical(this, "出错了",
-                                  QString("不能打开该文件！\n请检查是否有权限读取该文件...\n文件名：")
-                                  + filename);
+            QMessageBox::critical(this, "出错了", QString("不能打开该文件！\n请检查是否有权限读取该文件...\n文件名：") + filename);
             return;
         }
 
         QByteArray data = file.readAll();
         qDebug() << __FUNCTION__ << "： data = " << data;
 
-        qint64 bytes = m_socket->write(data);
+        qint64 bytes = m_tcpClient->write(data);
         qDebug() << __FUNCTION__ << ": bytes = " << bytes;
 
         file.close();
@@ -100,14 +117,11 @@ void MainWindow::onTriggeredReceiveFile()
 
         if (file.open(QIODevice::WriteOnly) == false)
         {
-            QMessageBox::critical(this, "出错了",
-                                  QString("不能打开该文件！\n请检查是否有权限写入该文件...\n文件名：")
-                                  + filename);
+            QMessageBox::critical(this, "出错了", QString("不能打开该文件！\n请检查是否有权限写入该文件...\n文件名：") + filename);
             return;
         }
 
-        qDebug() << __FUNCTION__ << ": length = " <<
-                 m_receiveBuffer->toPlainText().toStdString().length();
+        qDebug() << __FUNCTION__ << ": length = " << m_receiveBuffer->toPlainText().toStdString().length();
         qint64 bytes = file.write(m_receiveBuffer->toPlainText().toStdString().c_str(),
                                   m_receiveBuffer->toPlainText().toStdString().length());
         qDebug() << __FUNCTION__ << ": bytes = " << bytes;
@@ -131,13 +145,17 @@ void MainWindow::onToggledTcpClient(bool flag)
     {
         m_hostIp->setText(m_tcpClientRecord.hostIpStr);
         m_hostIp->setReadOnly(false);
+        m_button->setText(m_tcpClientRecord.buttonStr);
         m_light->setState(m_tcpClientRecord.lightState);
-        connectButton->setText("连接网络");
+        m_sendFileAction->setEnabled(m_tcpClientRecord.sendFileEnable);
+        clearReceiveBuffer();
     }
     else
     {
         m_tcpClientRecord.hostIpStr = m_hostIp->text();
+        m_tcpClientRecord.buttonStr = m_button->text();
         m_tcpClientRecord.lightState = m_light->state();
+        m_tcpClientRecord.sendFileEnable = m_sendFileAction->isEnabled();
     }
 }
 
@@ -147,7 +165,16 @@ void MainWindow::onToggledTcpServer(bool flag)
     {
         m_hostIp->clear();
         m_hostIp->setReadOnly(true);
-        connectButton->setText("开始监听");
+        m_button->setText(m_tcpServerRecord.buttonStr);
+        m_light->setState(m_tcpServerRecord.lightState);
+        m_sendFileAction->setEnabled(m_tcpServerRecord.sendFileEnable);
+        clearReceiveBuffer();
+    }
+    else
+    {
+        m_tcpServerRecord.buttonStr = m_button->text();
+        m_tcpServerRecord.lightState = m_light->state();
+        m_tcpServerRecord.sendFileEnable = m_sendFileAction->isEnabled();
     }
 }
 
@@ -157,17 +184,17 @@ void MainWindow::onToggledUdp(bool flag)
     {
         m_hostIp->clear();
         m_hostIp->setReadOnly(false);
-        connectButton->setText("开启UDP");
+        m_button->setText("开启UDP");
     }
 }
 
 void MainWindow::onConnectButton()
 {
-    if (m_tcpClient->isChecked())
+    if (m_tcpClientButton->isChecked())
     {
         handleConnect();
     }
-    else if (m_tcpServer->isChecked())
+    else if (m_tcpServerButton->isChecked())
     {
         handleListen();
     }
@@ -182,18 +209,50 @@ void MainWindow::onConnectButton()
     }
 }
 
-void MainWindow::onReadyRead()
+void MainWindow::onSendData()
 {
+    QString data = m_sendBuffer->toPlainText();
+
+    if (data.isEmpty())
+    {
+        QMessageBox::critical(this, "出错了", "发送缓冲区没有数据...\n请在发送缓冲区写入待发送数据。\n");
+        return;
+    }
+
+    if (m_tcpClientButton->isChecked())
+    {
+        qint64 bytes = m_tcpClient->write(data.toStdString().c_str(), data.length());
+        qDebug() << __FUNCTION__ << ": bytes = " << bytes;
+    }
+    else if (m_tcpServerButton->isChecked())
+    {
+        QList<QTcpSocket *> tcpClientList = m_tcpServer->findChildren<QTcpSocket *>();
+        if (tcpClientList[0] != 0)
+        {
+            qint64 bytes = tcpClientList[0]->write(data.toStdString().c_str(), data.length());
+            qDebug() << __FUNCTION__ << ": bytes = " << bytes;
+        }
+        else
+        {
+            QMessageBox::critical(this, "出错了", "没有已经接入的连接...");
+        }
+    }
+}
+
+void MainWindow::onReadyRead(QTcpSocket *socket)
+{
+    if (socket == NULL) return;
+
     m_receiveToFile->setEnabled(true);
     m_hasReceiveData = true;
 
-    QByteArray data = m_socket->readAll();
+    QByteArray data = socket->readAll();
 
     qDebug() << __FUNCTION__ << ": bytes = " << data.length();
 
     QString text = m_receiveBuffer->toPlainText();
 
-    if (text.length() >= 20000)
+    if (text.length() >= 20480)
     {
         text.clear();
         text = "";
@@ -202,21 +261,40 @@ void MainWindow::onReadyRead()
     m_receiveBuffer->setPlainText(text + data);
 }
 
-void MainWindow::onSendData()
+void MainWindow::onClientReadyRead()
 {
-    QString data = m_sendBuffer->toPlainText();
+    onReadyRead(m_tcpClient);
+}
 
-    if (data.isEmpty())
-    {
-        QMessageBox::critical(this, "出错了",
-                              "发送缓冲区没有数据...\n请在发送缓冲区写入待发送数据。\n");
-        return;
-    }
-    else
-    {
-        qint64 bytes = m_socket->write(data.toStdString().c_str(), data.length());
-        qDebug() << __FUNCTION__ << ": bytes = " << bytes;
-    }
+void MainWindow::onNewConnection()
+{
+    QTcpSocket* tcpClient = m_tcpServer->nextPendingConnection();
+
+    QMessageBox::information(this, "提示",
+                             tcpClient->peerAddress().toString() + ":" + tcpClient->peerPort() + "已连接", QMessageBox::Ok);
+
+    connect(tcpClient, SIGNAL(disconnected()), this, SLOT(onServerDisconnected()));
+    connect(tcpClient, SIGNAL(readyRead()), this, SLOT(onServerReadyRead()));
+
+    m_sendFileAction->setEnabled(true);
+    m_light->setState(true);
+}
+
+void MainWindow::onServerDisconnected()
+{
+    QTcpSocket* tcpClient = dynamic_cast<QTcpSocket*>(sender());
+    if (tcpClient == NULL) return;
+
+    QMessageBox::information(this, "提示",
+                             tcpClient->peerAddress().toString() + ":" + tcpClient->peerPort() + "已断开连接", QMessageBox::Ok);
+}
+
+void MainWindow::onServerReadyRead()
+{
+    QTcpSocket* tcpClient = dynamic_cast<QTcpSocket*>(sender());
+    if (tcpClient == NULL) return;
+
+    onReadyRead(tcpClient);
 }
 
 void MainWindow::clearSendBuffer()
