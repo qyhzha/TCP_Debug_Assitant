@@ -9,18 +9,17 @@ class QLightLabel : public QWidget
 {
         Q_OBJECT
 
-    public:
-        enum State {Normal, Working};
-
     protected:
-        State m_state;
+        bool m_state;
         QColor m_color;
 
         void paintEvent(QPaintEvent *);
 
     public:
         QLightLabel(QWidget *parent = NULL);
-        void setState(const State &state);
+
+        void setState(bool state);
+        bool state() const;
 };
 
 #endif // QLIGHTLABEL_H

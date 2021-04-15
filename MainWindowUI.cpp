@@ -153,7 +153,7 @@ bool MainWindow::initLeftWidget(QHBoxLayout *layout)
     QPushButton *exit = new QPushButton(this);
     assert(connectButton && clearSendBuffer && clearm_receiveBuffer && send && exit);
 
-    m_light->setState(QLightLabel::Normal);
+    m_light->setState(false);
     m_light->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     m_light->setMinimumSize(20, 20);
 
@@ -214,38 +214,41 @@ bool MainWindow::initConnectWidget(QVBoxLayout *layout)
     assert(layout);
 
     QGroupBox *connectBox = new QGroupBox(this);
-    tcpClient = new QRadioButton(connectBox);
-    tcpServer = new QRadioButton(connectBox);
-    udp = new QRadioButton(connectBox);
-    assert(connectBox && tcpClient && tcpServer && udp);
+    m_tcpClient = new QRadioButton(connectBox);
+    m_tcpServer = new QRadioButton(connectBox);
+    m_udp = new QRadioButton(connectBox);
+    assert(connectBox && m_tcpClient && m_tcpServer && m_udp);
 
     connectBox->setTitle("连接方式:");
     connectBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     connectBox->setMinimumWidth(200);
 
-    tcpClient->setText("TCP 客户端");
-    tcpClient->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    tcpClient->setMinimumWidth(180);
-    tcpClient->setChecked(true);
+    m_tcpClient->setText("TCP 客户端");
+    m_tcpClient->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_tcpClient->setMinimumWidth(180);
+    m_tcpClient->setChecked(true);
+    connect(m_tcpClient, SIGNAL(toggled(bool)), this, SLOT(onToggledTcpClient(bool)));
 
-    tcpServer->setText("TCP 服务器");
-    tcpServer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    tcpServer->setMinimumWidth(180);
-    tcpServer->setChecked(false);
+    m_tcpServer->setText("TCP 服务器");
+    m_tcpServer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_tcpServer->setMinimumWidth(180);
+    m_tcpServer->setChecked(false);
+    connect(m_tcpServer, SIGNAL(toggled(bool)), this, SLOT(onToggledTcpServer(bool)));
 
-    udp->setText("UDP");
-    udp->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    udp->setMinimumWidth(180);
-    udp->setChecked(false);
+    m_udp->setText("UDP");
+    m_udp->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_udp->setMinimumWidth(180);
+    m_udp->setChecked(false);
+    connect(m_udp, SIGNAL(toggled(bool)), this, SLOT(onToggledUdp(bool)));
 
     QVBoxLayout *vl = new QVBoxLayout();
     assert(vl);
 
     vl->setSpacing(4);
     vl->setContentsMargins(10, 10, 10, 10);
-    vl->addWidget(tcpClient, 1, Qt::AlignLeft);
-    vl->addWidget(tcpServer, 1, Qt::AlignLeft);
-    vl->addWidget(udp, 1, Qt::AlignLeft);
+    vl->addWidget(m_tcpClient, 1, Qt::AlignLeft);
+    vl->addWidget(m_tcpServer, 1, Qt::AlignLeft);
+    vl->addWidget(m_udp, 1, Qt::AlignLeft);
 
     connectBox->setLayout(vl);
 
@@ -260,8 +263,8 @@ bool MainWindow::initSetHostWidget(QVBoxLayout *layout)
 
     QGroupBox *setBox = new QGroupBox(this);
     QLabel *hostlabel = new QLabel(this);
-    hostIp = new QLineEdit(this);
-    assert(setBox && hostlabel && hostIp);
+    m_hostIp = new QLineEdit(this);
+    assert(setBox && hostlabel && m_hostIp);
 
     setBox->setTitle("设置:");
     setBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -269,9 +272,9 @@ bool MainWindow::initSetHostWidget(QVBoxLayout *layout)
     hostlabel->setText("IP 地址");
     hostlabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     hostlabel->setMinimumWidth(180);
-    hostIp->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
-    hostIp->setMinimumWidth(180);
-    hostIp->setMinimumHeight(30);
+    m_hostIp->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    m_hostIp->setMinimumWidth(180);
+    m_hostIp->setMinimumHeight(30);
 
     QHBoxLayout *h1 = new QHBoxLayout();
     assert(h1);
@@ -297,7 +300,7 @@ bool MainWindow::initSetHostWidget(QVBoxLayout *layout)
     v->setSpacing(4);
     v->setContentsMargins(10, 10, 10, 10);
     v->addWidget(hostlabel, 1, Qt::AlignLeft);
-    v->addWidget(hostIp, 1, Qt::AlignLeft);
+    v->addWidget(m_hostIp, 1, Qt::AlignLeft);
     v->addLayout(h1, 1);
 
     setBox->setLayout(v);

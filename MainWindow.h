@@ -32,14 +32,22 @@ class MainWindow : public QMainWindow
         Q_OBJECT
 
     protected:
+        struct tcpClientRecord : public QObject
+        {
+            QString hostIpStr;
+            bool lightState;
+        };
+
+    protected:
         QAction *sendFile;
         QAction *m_receiveToFile;
         QAction *ascii;
         QAction *utf_8;
-        QRadioButton *tcpClient;
-        QRadioButton *tcpServer;
-        QRadioButton *udp;
-        QLineEdit *hostIp;
+        QRadioButton *m_tcpClient;
+        tcpClientRecord m_tcpClientRecord;
+        QRadioButton *m_tcpServer;
+        QRadioButton *m_udp;
+        QLineEdit *m_hostIp;
         QSpinBox *hostPort;
         QLightLabel *m_light;
         QPushButton *connectButton;
@@ -54,6 +62,7 @@ class MainWindow : public QMainWindow
     protected:
         MainWindow(QWidget *parent);
         bool construct();
+
         bool initMenuBar();
         bool initMenuFile(QMenu *menu);
         bool initMenuCode(QMenu *menu);
@@ -66,11 +75,18 @@ class MainWindow : public QMainWindow
         bool initPortWidget(QVBoxLayout *layout, QString text);
         bool initRightWidget(QHBoxLayout *layout);
 
+        void handleConnect();
+        void handleListen();
+        void handleUdp();
+
     protected slots:
         void onTriggeredSendFile();
         void onTriggeredReceiveFile();
         void onToggledAscii(bool flag);
         void onToggledUtf_8(bool flag);
+        void onToggledTcpClient(bool flag);
+        void onToggledTcpServer(bool flag);
+        void onToggledUdp(bool flag);
         void onConnectButton();
         void onReadyRead();
         void onSendData();

@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "qapplication": "cpp",
+        "qtcpsocket": "c",
+        "qtcpsocket.h": "c"
+    }
+}

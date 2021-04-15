@@ -1,15 +1,20 @@
 #include "QLightLabel.h"
 
-QLightLabel::QLightLabel(QWidget *parent) : QWidget(parent), m_state(Normal)
+QLightLabel::QLightLabel(QWidget *parent) : QWidget(parent), m_state(false)
 {
     update();
 }
 
-void QLightLabel::setState(const QLightLabel::State &state)
+void QLightLabel::setState(bool state)
 {
     m_state = state;
 
     update();
+}
+
+bool QLightLabel::state() const
+{
+    return m_state;
 }
 
 void QLightLabel::paintEvent(QPaintEvent *)
@@ -21,20 +26,16 @@ void QLightLabel::paintEvent(QPaintEvent *)
     painter.translate(width() / 2, height() / 2);
     painter.scale(side / 100.0, side / 100.0);
 
-    switch (m_state)
+    if (m_state)
     {
-        case Normal:
-            m_color = Qt::gray;
-            break;
-        case Working:
-            m_color = QColor(32, 255, 32);
-            break;
-        default:
-            m_color = Qt::gray;
+        m_color = QColor(32, 255, 32);
+    }
+    else
+    {
+        m_color = Qt::gray;
     }
 
-    QRadialGradient radial(0, 0, 50, 0,
-                           0);    //设置圆的原点和焦点在中心,半径50
+    QRadialGradient radial(0, 0, 50, 0, 0);
     radial.setSpread(QGradient::PadSpread);
     radial.setColorAt(0, m_color);
     radial.setColorAt(0.9, m_color);
