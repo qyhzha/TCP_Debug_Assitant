@@ -89,7 +89,7 @@ class MainWindow : public QMainWindow
         void handleConnect();
         void handleListen();
         void handleUdp();
-
+        void updateRecord();
         void onReadyRead(QTcpSocket *socket);
 
     protected slots:
@@ -105,6 +105,7 @@ class MainWindow : public QMainWindow
         void onSendData();
 
         void onClientReadyRead();
+        void onClientDisconnected();
 
         void onNewConnection();
         void onServerDisconnected();

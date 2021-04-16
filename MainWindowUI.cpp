@@ -221,6 +221,8 @@ bool MainWindow::initConnectWidget(QVBoxLayout *layout)
     m_udp = new QRadioButton(connectBox);
     assert(connectBox && m_tcpClientButton && m_tcpClient && m_tcpServerButton && m_udp);
 
+    m_tcpServer->setMaxPendingConnections(1);
+
     connectBox->setTitle("连接方式:");
     connectBox->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     connectBox->setMinimumWidth(200);

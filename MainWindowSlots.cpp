@@ -2,9 +2,7 @@
 
 void MainWindow::handleConnect()
 {
-    static bool connectFlag = false;
-
-    if (!connectFlag)
+    if (m_button->text() == "连接网络")
     {
         if (m_hostIp->text().isEmpty())
         {
@@ -20,32 +18,36 @@ void MainWindow::handleConnect()
             return;
         }
 
-        qDebug() << __FUNCTION__ << ": connect success!";
-
         connect(m_tcpClient, SIGNAL(readyRead()), this, SLOT(onClientReadyRead()));
+        connect(m_tcpClient, SIGNAL(disconnected()), this, SLOT(onClientDisconnected()));
 
-        m_sendFileAction->setEnabled(true);
-        m_button->setText("断开连接");
-        m_light->setState(true);
-        connectFlag = true;
+        m_tcpClientRecord.hostIpStr = m_hostIp->text();
+        m_tcpClientRecord.buttonStr = "断开连接";
+        m_tcpClientRecord.sendFileEnable = true;
+        m_tcpClientRecord.lightState = true;
+
+        updateRecord();
+
+        qDebug() << __FUNCTION__ << ": connect success!";
     }
-    else
+    else if (m_button->text() == "断开连接")
     {
         m_tcpClient->close();
 
-        qDebug() << __FUNCTION__ << ": Close network connect success!";
+        m_tcpClientRecord.hostIpStr = m_hostIp->text();
+        m_tcpClientRecord.buttonStr = "连接网络";
+        m_tcpClientRecord.sendFileEnable = false;
+        m_tcpClientRecord.lightState = false;
 
-        m_sendFileAction->setEnabled(false);
-        m_button->setText("连接网络");
-        m_light->setState(false);
-        connectFlag = false;
+        updateRecord();
+
+        qDebug() << __FUNCTION__ << ": Close network connect success!";
     }
 }
 
 void MainWindow::handleListen()
 {
-    static bool listenFlag = false;
-    if (!listenFlag)
+    if (m_button->text() == "开启监听")
     {
         if (m_tcpServer->listen(QHostAddress::Any, hostPort->value()) != true)
         {
@@ -56,27 +58,57 @@ void MainWindow::handleListen()
 
         connect(m_tcpServer, SIGNAL(newConnection()), this, SLOT(onNewConnection()));
 
-        qDebug() << __FUNCTION__ << ": listern success!";
+        m_tcpServerRecord.buttonStr = "结束监听";
+        m_tcpServerRecord.lightState = false;
+        m_tcpServerRecord.sendFileEnable = false;
 
-        m_button->setText("结束监听");
-        listenFlag = true;
+        updateRecord();
+
+        qDebug() << __FUNCTION__ << ": listern success!";
     }
-    else
+    else if (m_button->text() == "结束监听")
     {
+        QList<QTcpSocket *> tcpClientList = m_tcpServer->findChildren<QTcpSocket *>();
+        if (tcpClientList[tcpClientList.length() - 1] != 0)
+        {
+            tcpClientList[tcpClientList.length() - 1]->close();
+        }
+
         m_tcpServer->close();
 
-        qDebug() << __FUNCTION__ << ": Close listen success!";
+        m_tcpServerRecord.buttonStr = "开启监听";
+        m_tcpServerRecord.sendFileEnable = false;
+        m_tcpServerRecord.lightState = false;
 
-        m_sendFileAction->setEnabled(false);
-        m_button->setText("开启监听");
-        m_light->setState(false);
-        listenFlag = false;
+        updateRecord();
+
+        qDebug() << __FUNCTION__ << ": Close listen success!";
     }
 }
 
 void MainWindow::handleUdp()
 {
 
+}
+
+void MainWindow::updateRecord()
+{
+    if (m_tcpClientButton->isChecked())
+    {
+        m_hostIp->setText(m_tcpClientRecord.hostIpStr);
+        m_hostIp->setReadOnly(false);
+        m_button->setText(m_tcpClientRecord.buttonStr);
+        m_light->setState(m_tcpClientRecord.lightState);
+        m_sendFileAction->setEnabled(m_tcpClientRecord.sendFileEnable);
+    }
+    else if (m_tcpServerButton->isChecked())
+    {
+        m_hostIp->clear();
+        m_hostIp->setReadOnly(true);
+        m_button->setText(m_tcpServerRecord.buttonStr);
+        m_light->setState(m_tcpServerRecord.lightState);
+        m_sendFileAction->setEnabled(m_tcpServerRecord.sendFileEnable);
+    }
 }
 
 void MainWindow::onTriggeredSendFile()
@@ -108,25 +140,26 @@ void MainWindow::onTriggeredSendFile()
 void MainWindow::onTriggeredReceiveFile()
 {
     QString filename = QFileDialog::getSaveFileName(this, "保存到文件：");
-
-    if (filename.isEmpty() == false)
+    if (filename.isEmpty())
     {
-        qDebug() << __FUNCTION__ << "： filename = " << filename;
-
-        QFile file(filename);
-
-        if (file.open(QIODevice::WriteOnly) == false)
-        {
-            QMessageBox::critical(this, "出错了", QString("不能打开该文件！\n请检查是否有权限写入该文件...\n文件名：") + filename);
-            return;
-        }
-
-        qDebug() << __FUNCTION__ << ": length = " << m_receiveBuffer->toPlainText().toStdString().length();
-        qint64 bytes = file.write(m_receiveBuffer->toPlainText().toStdString().c_str(),
-                                  m_receiveBuffer->toPlainText().toStdString().length());
-        qDebug() << __FUNCTION__ << ": bytes = " << bytes;
-        file.close();
+        return;
     }
+
+    QFile file(filename);
+
+    if (file.open(QIODevice::WriteOnly) == false)
+    {
+        QMessageBox::critical(this, "出错了", QString("不能打开该文件！\n请检查是否有权限写入该文件...\n文件名：") + filename);
+        return;
+    }
+
+    file.write(m_receiveBuffer->toPlainText().toStdString().c_str(), m_receiveBuffer->toPlainText().toStdString().length());
+
+    file.close();
+
+    clearReceiveBuffer();
+
+    qDebug() << __FUNCTION__ << ": length = " << m_receiveBuffer->toPlainText().toStdString().length();
 }
 
 void MainWindow::onToggledAscii(bool flag)
@@ -143,11 +176,7 @@ void MainWindow::onToggledTcpClient(bool flag)
 {
     if (flag)
     {
-        m_hostIp->setText(m_tcpClientRecord.hostIpStr);
-        m_hostIp->setReadOnly(false);
-        m_button->setText(m_tcpClientRecord.buttonStr);
-        m_light->setState(m_tcpClientRecord.lightState);
-        m_sendFileAction->setEnabled(m_tcpClientRecord.sendFileEnable);
+        updateRecord();
         clearReceiveBuffer();
     }
     else
@@ -163,11 +192,7 @@ void MainWindow::onToggledTcpServer(bool flag)
 {
     if (flag)
     {
-        m_hostIp->clear();
-        m_hostIp->setReadOnly(true);
-        m_button->setText(m_tcpServerRecord.buttonStr);
-        m_light->setState(m_tcpServerRecord.lightState);
-        m_sendFileAction->setEnabled(m_tcpServerRecord.sendFileEnable);
+        updateRecord();
         clearReceiveBuffer();
     }
     else
@@ -227,10 +252,9 @@ void MainWindow::onSendData()
     else if (m_tcpServerButton->isChecked())
     {
         QList<QTcpSocket *> tcpClientList = m_tcpServer->findChildren<QTcpSocket *>();
-        if (tcpClientList[0] != 0)
+        if (tcpClientList[tcpClientList.length() - 1] != 0)
         {
-            qint64 bytes = tcpClientList[0]->write(data.toStdString().c_str(), data.length());
-            qDebug() << __FUNCTION__ << ": bytes = " << bytes;
+            tcpClientList[tcpClientList.length() - 1]->write(data.toStdString().c_str(), data.length());
         }
         else
         {
@@ -266,18 +290,36 @@ void MainWindow::onClientReadyRead()
     onReadyRead(m_tcpClient);
 }
 
+void MainWindow::onClientDisconnected()
+{
+    qDebug() << __FUNCTION__ << ": Close network connect success!";
+
+    //m_tcpClientRecord.hostIpStr = m_hostIp->text();
+    m_tcpClientRecord.buttonStr = "连接网络";
+    m_tcpClientRecord.lightState = false;
+    m_tcpClientRecord.sendFileEnable = false;
+
+    updateRecord();
+}
+
 void MainWindow::onNewConnection()
 {
     QTcpSocket* tcpClient = m_tcpServer->nextPendingConnection();
 
     QMessageBox::information(this, "提示",
-                             tcpClient->peerAddress().toString() + ":" + tcpClient->peerPort() + "已连接", QMessageBox::Ok);
+                             tcpClient->peerAddress().toString() + ":" + QString::number(tcpClient->peerPort()) + "已连接",
+                             QMessageBox::Ok);
 
     connect(tcpClient, SIGNAL(disconnected()), this, SLOT(onServerDisconnected()));
     connect(tcpClient, SIGNAL(readyRead()), this, SLOT(onServerReadyRead()));
 
-    m_sendFileAction->setEnabled(true);
-    m_light->setState(true);
+    m_tcpServer->pauseAccepting();
+
+    m_tcpServerRecord.buttonStr = "结束监听";
+    m_tcpServerRecord.sendFileEnable = true;
+    m_tcpServerRecord.lightState = true;
+
+    updateRecord();
 }
 
 void MainWindow::onServerDisconnected()
@@ -285,8 +327,19 @@ void MainWindow::onServerDisconnected()
     QTcpSocket* tcpClient = dynamic_cast<QTcpSocket*>(sender());
     if (tcpClient == NULL) return;
 
+    tcpClient->deleteLater();
+
     QMessageBox::information(this, "提示",
-                             tcpClient->peerAddress().toString() + ":" + tcpClient->peerPort() + "已断开连接", QMessageBox::Ok);
+                             tcpClient->peerAddress().toString() + ":" + QString::number(tcpClient->peerPort()) + "已断开连接",
+                             QMessageBox::Ok);
+
+    m_tcpServer->resumeAccepting();
+
+    m_tcpServerRecord.buttonStr = "结束监听";
+    m_tcpServerRecord.sendFileEnable = false;
+    m_tcpServerRecord.lightState = false;
+
+    updateRecord();
 }
 
 void MainWindow::onServerReadyRead()

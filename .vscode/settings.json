@@ -2,7 +2,12 @@
     "files.associations": {
         "qapplication": "cpp",
         "qtcpsocket": "c",
-        "qtcpsocket.h": "c"
+        "qtcpsocket.h": "c",
+        "fstream": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "vector": "cpp"
     },
     "restructuredtext.confPath": ""
 }
